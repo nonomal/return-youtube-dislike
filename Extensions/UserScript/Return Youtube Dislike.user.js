@@ -28,6 +28,7 @@ const extConfig = {
   // You may change the following variables to allowed values listed in the corresponding brackets (* means default). Keep the style and keywords intact.
   showUpdatePopup: false, // [true, false*] Show a popup tab after extension update (See what's new)
   disableVoteSubmission: false, // [true, false*] Disable like/dislike submission (Stops counting your likes and dislikes)
+  disableLogging: true, // [true*, false] Disable Logging API Response in JavaScript Console.
   coloredThumbs: false, // [true, false*] Colorize thumbs (Use custom colors for thumb icons)
   coloredBar: false, // [true, false*] Colorize ratio bar (Use custom colors for ratio bar)
   colorTheme: "classic", // [classic*, accessible, neon] Color theme (red/green, blue/yellow, pink/cyan)
@@ -51,8 +52,10 @@ let isMobile = location.hostname == "m.youtube.com";
 let isShorts = () => location.pathname.startsWith("/shorts");
 let mobileDislikes = 0;
 function cLog(text, subtext = "") {
-  subtext = subtext.trim() === "" ? "" : `(${subtext})`;
-  console.log(`[Return YouTube Dislikes] ${text} ${subtext}`);
+  if (!extConfig.disableLogging) {
+    subtext = subtext.trim() === "" ? "" : `(${subtext})`; 
+    console.log(`[Return YouTube Dislikes] ${text} ${subtext}`); 
+  }
 }
 
 function isInViewport(element) {
@@ -255,8 +258,12 @@ function setDislikes(dislikesCount) {
     mobileDislikes = dislikesCount;
     return;
   }
-  getDislikeTextContainer()?.removeAttribute("is-empty");
-  getDislikeTextContainer().innerText = dislikesCount;
+
+  const _container = getDislikeTextContainer();
+  _container?.removeAttribute("is-empty");
+  if (_container?.innerText !== dislikesCount) {
+    _container.innerText = dislikesCount;
+  }
 }
 
 function getLikeCountFromButton() {
@@ -504,7 +511,7 @@ function getVideoId() {
   const urlObject = new URL(window.location.href);
   const pathname = urlObject.pathname;
   if (pathname.startsWith("/clip")) {
-    return document.querySelector("meta[itemprop='videoId']").content;
+    return (document.querySelector("meta[itemprop='videoId']") || document.querySelector("meta[itemprop='identifier']")).content;
   } else {
     if (pathname.startsWith("/shorts")) {
       return pathname.slice(8);
@@ -645,6 +652,7 @@ function setEventListeners(evt) {
               {
                 attributes: true,
                 subtree: true,
+                childList: true,
               },
               updateDOMDislikes,
             );
